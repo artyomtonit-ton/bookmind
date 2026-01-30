@@ -1,12 +1,47 @@
 {% extends "base.html" %}
 
 {% block content %}
-<div class="text-center py-20">
-    <h1 class="text-5xl font-extrabold text-gray-900 mb-6">
-        Делитесь мыслями о <span class="text-indigo-600">прочитанных книгах</span>
-    </h1>
-    <p class="text-xl text-gray-600 max-w-2xl mx-auto">
-        BookMind — это пространство, где ваши рецензии превращаются в искусство, а статистика помогает читать больше и качественнее.
-    </p>
+<div class="mb-16">
+    <h1 class="text-4xl font-bold text-white tracking-tighter uppercase">Свежие рецензии</h1>
+    <div class="h-1 w-12 bg-white mt-4"></div>
+</div>
+
+<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-10">
+    {% for review in reviews %}
+    <div class="group flex flex-col bg-zinc-950 border border-zinc-800 p-1 hover:border-zinc-500 transition-colors duration-500">
+        
+        <div class="relative h-96 overflow-hidden bg-zinc-900 flex items-center justify-center">
+            <img src="{{ review.cover_url }}" alt="{{ review.book_title }}" 
+                class="w-full h-full object-contain p-4 grayscale group-hover:grayscale-0 transition-all duration-700">
+    
+            <div class="absolute top-0 right-0 bg-white text-black px-2 py-1 text-[10px] font-black">
+                {{ review.rating }} / 10
+            </div>
+        </div>
+
+        <div class="p-6 flex flex-col flex-grow">
+            <div class="mb-4">
+                <p class="text-[10px] text-zinc-500 uppercase tracking-[0.2em] mb-1">{{ review.author }}</p>
+                <h3 class="text-lg font-bold text-white uppercase leading-none">{{ review.book_title }}</h3>
+            </div>
+
+            <p class="text-zinc-400 text-xs leading-relaxed line-clamp-3 mb-8 font-light">
+                "{{ review.text }}"
+            </p>
+
+            <div class="mt-auto flex items-center justify-between border-t border-zinc-900 pt-4">
+                <div class="flex items-center space-x-3">
+                    <div class="w-6 h-6 rounded-full bg-zinc-700 flex items-center justify-center text-[10px] text-white">
+                        {{ review.reviewer[0] }}
+                    </div>
+                    <span class="text-[10px] uppercase tracking-wider text-zinc-300">{{ review.reviewer }}</span>
+                </div>
+                <span class="text-[9px] text-zinc-600 font-bold uppercase">
+                    {{ review.status }}
+                </span>
+            </div>
+        </div>
+    </div>
+    {% endfor %}
 </div>
 {% endblock %}
