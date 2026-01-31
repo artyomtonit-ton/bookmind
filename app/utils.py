@@ -1,5 +1,5 @@
 import httpx
-from API import GOOGLE_API_KEY
+from .API import GOOGLE_API_KEY
 
 GOOGLE_BOOKS_API_KEY = GOOGLE_API_KEY
 
