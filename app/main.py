@@ -1,13 +1,14 @@
 from fastapi import FastAPI, Request, Depends, Form
-from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select
-from .database import get_db, engine, Base
-from .models import Review
 from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
+from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy import select
+
+from .database import get_db, engine, Base
+from .models import Review
+from .utils import fetch_book_info
 
 app = FastAPI(title="BookMind")
-
 templates = Jinja2Templates(directory="app/templates")
 
 @app.on_event("startup")
@@ -19,11 +20,14 @@ async def startup():
 async def read_root(request: Request, db: AsyncSession = Depends(get_db)):
     result = await db.execute(select(Review).order_by(Review.created_at.desc()))
     reviews = result.scalars().all()
-    
-    return templates.TemplateResponse(
-        "index.html", 
-        {"request": request, "title": "Лента", "reviews": reviews}
-    )
+    return templates.TemplateResponse("index.html", {"request": request, "title": "Лента", "reviews": reviews})
+
+@app.get("/search")
+async def search_book(title: str):
+    if not title:
+        return {"error": "Введите название"}
+    book_data = await fetch_book_info(title)
+    return book_data if book_data else {"error": "Книга не найдена"}
 
 @app.get("/add", response_class=HTMLResponse)
 async def add_review_page(request: Request):
@@ -37,6 +41,7 @@ async def create_review(
     reviewer: str = Form(...),
     rating: int = Form(...),
     text: str = Form(...),
+    description: str = Form(None),
     cover_url: str = Form(...),
     status: str = Form(...)
 ):
@@ -46,10 +51,10 @@ async def create_review(
         reviewer=reviewer,
         rating=rating,
         text=text,
+        description=description,
         cover_url=cover_url,
         status=status
     )
-    
     db.add(new_review)
     await db.commit()
     return RedirectResponse(url="/", status_code=303)

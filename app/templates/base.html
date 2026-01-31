@@ -1,38 +1,51 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="ru">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <script src="https://cdn.tailwindcss.com"></script>
     <title>{{ title }} | BookMind</title>
-</head>
-<body class="bg-black text-zinc-100 font-sans">
-    
-    <nav class="bg-black/90 backdrop-blur-md border-b border-zinc-800 sticky top-0 z-50">
-        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div class="flex justify-between h-16 items-center">
-                <div class="flex items-center">
-                    <span class="text-xl font-bold tracking-tighter uppercase">
-                        BookMind
-                    </span>
-                </div>
-                <div class="flex items-center space-x-8 text-[12px] font-bold uppercase tracking-widest text-zinc-400">
-                    <a href="#" class="hover:text-white transition">Лента</a>
-                    <a href="#" class="hover:text-white transition">Топ книг</a>
-                    <a href="#" class="bg-white text-black px-5 py-2 rounded-sm hover:bg-zinc-200 transition">
-                        Войти
-                    </a>
-                </div>
-            </div>
+  </head>
+  <body class="bg-black text-zinc-100 font-sans">
+    <nav
+      class="bg-black/90 backdrop-blur-md border-b border-zinc-800 sticky top-0 z-50"
+    >
+      <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div class="flex justify-between h-16 items-center">
+          <div class="flex items-center">
+            <a href="/" class="text-xl font-bold tracking-tighter uppercase"
+              >BookMind</a
+            >
+          </div>
+          <div
+            class="flex items-center space-x-8 text-[12px] font-bold uppercase tracking-widest text-zinc-400"
+          >
+            <a href="/" class="hover:text-white transition">Лента</a>
+            <a href="#" class="hover:text-white transition">Топ книг</a>
+            <a
+              href="/add"
+              class="hover:text-white transition border-r border-zinc-800 pr-8"
+            >
+              Добавить
+            </a>
+
+            <a
+              href="#"
+              class="bg-white text-black px-5 py-2 rounded-sm hover:bg-zinc-200 transition"
+            >
+              Войти
+            </a>
+          </div>
         </div>
+      </div>
     </nav>
-
     <main class="max-w-7xl mx-auto px-4 py-12">
-        {% block content %}{% endblock %}
+      {% block content %}{% endblock %}
     </main>
-
-    <footer class="mt-20 py-10 border-t border-zinc-900 text-center text-zinc-600 text-[10px] uppercase tracking-[0.2em]">
-        &copy; 2026 BookMind. Archive of thoughts.
+    <footer
+      class="mt-20 py-10 border-t border-zinc-900 text-center text-zinc-600 text-[10px] uppercase tracking-[0.2em]"
+    >
+      &copy; 2026 BookMind. Archive of thoughts.
     </footer>
-</body>
+  </body>
 </html>

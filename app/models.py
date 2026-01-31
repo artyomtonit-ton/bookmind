@@ -11,6 +11,7 @@ class Review(Base):
     reviewer = Column(String, nullable=False)
     rating = Column(Integer, nullable=False)
     text = Column(Text, nullable=False)
+    description = Column(Text, nullable=True)
     cover_url = Column(String)
     status = Column(String)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
