@@ -1,7 +1,7 @@
 import httpx
-from .API import GOOGLE_API_KEY
+from .secrets import secretAPI
 
-GOOGLE_BOOKS_API_KEY = GOOGLE_API_KEY
+GOOGLE_BOOKS_API_KEY = secretAPI
 
 async def fetch_book_info(title: str):
     url = "https://www.googleapis.com/books/v1/volumes"
