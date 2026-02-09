@@ -58,6 +58,23 @@
             </div>
           </div>
         </div>
+
+        <div class="pt-6 border-t border-zinc-900 mt-6">
+          <form
+            action="/review/{{ review.id }}/delete"
+            method="post"
+            onsubmit="
+              return confirm('ВЫ УВЕРЕНЫ? ЭТО ДЕЙСТВИЕ НЕЛЬЗЯ ОТМЕНИТЬ.');
+            "
+          >
+            <button
+              type="submit"
+              class="w-full border border-red-900/30 text-red-900 hover:bg-red-950 hover:text-red-500 hover:border-red-500 transition-colors py-3 text-[10px] font-black uppercase tracking-[0.2em]"
+            >
+              Удалить запись
+            </button>
+          </form>
+        </div>
       </div>
     </div>
 

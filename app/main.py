@@ -43,6 +43,20 @@ async def read_review(review_id: int, request: Request, db: AsyncSession = Depen
         {"request": request, "review": review, "title": review.book_title}
     )
 
+@app.post("/review/{review_id}/delete")
+async def delete_review(review_id: int, db: AsyncSession = Depends(get_db)):
+    query = select(Review).where(Review.id == review_id)
+    result = await db.execute(query)
+    review = result.scalar_one_or_none()
+    
+    if not review:
+        raise HTTPException(status_code=404, detail="Review not found")
+    
+    await db.delete(review)
+    await db.commit()
+    
+    return RedirectResponse(url="/", status_code=303)
+
 @app.get("/add", response_class=HTMLResponse)
 async def add_review_page(request: Request):
     return templates.TemplateResponse("add_review.html", {"request": request, "title": "Новая мысль"})
