@@ -8,8 +8,9 @@
 
 <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-10">
   {% for review in reviews %}
-  <div
-    class="group flex flex-col bg-zinc-950 border border-zinc-800 p-1 hover:border-zinc-500 transition-colors duration-500"
+  <a
+    href="/review/{{ review.id }}"
+    class="group flex flex-col bg-zinc-950 border border-zinc-800 p-1 hover:border-zinc-500 transition-colors duration-500 block"
   >
     <div
       class="relative h-96 overflow-hidden bg-zinc-900 flex items-center justify-center"
@@ -31,7 +32,9 @@
         <p class="text-[10px] text-zinc-500 uppercase tracking-[0.2em] mb-1">
           {{ review.author }}
         </p>
-        <h3 class="text-lg font-bold text-white uppercase leading-tight mb-2">
+        <h3
+          class="text-lg font-bold text-white uppercase leading-tight mb-2 group-hover:text-zinc-300 transition"
+        >
           {{ review.book_title }}
         </h3>
 
@@ -70,7 +73,7 @@
         </span>
       </div>
     </div>
-  </div>
+  </a>
   {% endfor %}
 </div>
 {% endblock %}

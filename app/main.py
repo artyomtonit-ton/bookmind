@@ -1,4 +1,4 @@
-from fastapi import FastAPI, Request, Depends, Form
+from fastapi import FastAPI, Request, Depends, Form, HTTPException
 from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -28,6 +28,20 @@ async def search_book(title: str):
         return {"error": "Введите название"}
     book_data = await fetch_book_info(title)
     return book_data if book_data else {"error": "Книга не найдена"}
+
+@app.get("/review/{review_id}", response_class=HTMLResponse)
+async def read_review(review_id: int, request: Request, db: AsyncSession = Depends(get_db)):
+    query = select(Review).where(Review.id == review_id)
+    result = await db.execute(query)
+    review = result.scalar_one_or_none()
+    
+    if not review:
+        raise HTTPException(status_code=404, detail="Review not found")
+    
+    return templates.TemplateResponse(
+        "review_detail.html", 
+        {"request": request, "review": review, "title": review.book_title}
+    )
 
 @app.get("/add", response_class=HTMLResponse)
 async def add_review_page(request: Request):
