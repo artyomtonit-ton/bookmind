@@ -86,3 +86,50 @@ async def create_review(
     db.add(new_review)
     await db.commit()
     return RedirectResponse(url="/", status_code=303)
+
+@app.get("/review/{review_id}/edit", response_class=HTMLResponse)
+async def edit_review_page(review_id: int, request: Request, db: AsyncSession = Depends(get_db)):
+    query = select(Review).where(Review.id == review_id)
+    result = await db.execute(query)
+    review = result.scalar_one_or_none()
+    
+    if not review:
+        raise HTTPException(status_code=404, detail="Review not found")
+        
+    return templates.TemplateResponse(
+        "edit_review.html", 
+        {"request": request, "review": review, "title": "Редактирование"}
+    )
+
+@app.post("/review/{review_id}/edit")
+async def update_review(
+    review_id: int,
+    db: AsyncSession = Depends(get_db),
+    book_title: str = Form(...),
+    author: str = Form(...),
+    reviewer: str = Form(...),
+    rating: int = Form(...),
+    text: str = Form(...),
+    description: str = Form(None),
+    cover_url: str = Form(...),
+    status: str = Form(...)
+):
+    query = select(Review).where(Review.id == review_id)
+    result = await db.execute(query)
+    review = result.scalar_one_or_none()
+    
+    if not review:
+        raise HTTPException(status_code=404, detail="Review not found")
+    
+    review.book_title = book_title
+    review.author = author
+    review.reviewer = reviewer
+    review.rating = rating
+    review.text = text
+    review.description = description
+    review.cover_url = cover_url
+    review.status = status
+    
+    await db.commit()
+    
+    return RedirectResponse(url=f"/review/{review_id}", status_code=303)
