@@ -10,7 +10,7 @@
   {% for review in reviews %}
   <a
     href="/review/{{ review.id }}"
-    class="group flex flex-col bg-zinc-950 border border-zinc-800 p-1 hover:border-zinc-500 transition-colors duration-500 block"
+    class="group flex flex-col bg-zinc-950 border border-zinc-800 p-1 hover:border-zinc-500 transition-colors duration-500"
   >
     <div
       class="relative h-96 overflow-hidden bg-zinc-900 flex items-center justify-center"
@@ -37,7 +37,6 @@
         >
           {{ review.book_title }}
         </h3>
-
         {% if review.description %}
         <p
           class="text-[10px] text-zinc-600 leading-relaxed line-clamp-2 italic mb-4"
@@ -46,13 +45,11 @@
         </p>
         {% endif %}
       </div>
-
       <p
         class="text-zinc-300 text-xs leading-relaxed line-clamp-4 font-light border-l border-zinc-800 pl-4 mb-8"
       >
         "{{ review.text }}"
       </p>
-
       <div
         class="mt-auto flex items-center justify-between border-t border-zinc-900 pt-4"
       >
@@ -60,17 +57,16 @@
           <div
             class="w-6 h-6 rounded-full bg-zinc-800 border border-zinc-700 flex items-center justify-center text-[10px] text-white"
           >
-            {{ review.reviewer[0] }}
+            {{ review.owner.username[0] if review.owner else '?' }}
           </div>
           <span class="text-[10px] uppercase tracking-wider text-zinc-400"
-            >{{ review.reviewer }}</span
+            >{{ review.owner.username if review.owner else 'Аноним' }}</span
           >
         </div>
         <span
           class="text-[9px] text-zinc-600 font-bold uppercase tracking-tighter"
+          >{{ review.status }}</span
         >
-          {{ review.status }}
-        </span>
       </div>
     </div>
   </a>

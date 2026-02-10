@@ -15,8 +15,7 @@
         <div class="aspect-[2/3] overflow-hidden bg-zinc-900 relative">
           <img
             src="{{ review.cover_url }}"
-            alt="{{ review.book_title }}"
-            class="w-full h-full object-cover grayscale group-hover:grayscale-0 transition-all duration-700 ease-out"
+            class="w-full h-full object-cover grayscale group-hover:grayscale-0 transition-all duration-700"
           />
           <div
             class="absolute top-0 right-0 bg-white text-black px-4 py-2 text-xl font-black italic"
@@ -37,20 +36,19 @@
             {{ review.status }}
           </div>
         </div>
-
         <div>
           <p class="text-[9px] uppercase tracking-[0.2em] text-zinc-500 mb-2">
-            Рецензент
+            Автор мысли
           </p>
           <div class="flex items-center space-x-3">
             <div
               class="w-10 h-10 rounded-full bg-zinc-800 border border-zinc-700 flex items-center justify-center text-sm font-bold text-white"
             >
-              {{ review.reviewer[0] }}
+              {{ review.owner.username[0] if review.owner else '?' }}
             </div>
             <div>
               <p class="text-xs font-bold text-white uppercase tracking-wider">
-                {{ review.reviewer }}
+                {{ review.owner.username if review.owner else 'Аноним' }}
               </p>
               <p class="text-[9px] text-zinc-600 uppercase tracking-widest">
                 {{ review.created_at.strftime('%d.%m.%Y') }}
@@ -59,29 +57,27 @@
           </div>
         </div>
 
+        {% if user and user.id == review.user_id %}
         <div class="pt-6 border-t border-zinc-900 mt-6 space-y-3">
           <a
             href="/review/{{ review.id }}/edit"
             class="block w-full text-center border border-zinc-800 text-zinc-400 bg-zinc-900 hover:bg-zinc-800 hover:text-white hover:border-zinc-500 transition-colors py-3 text-[10px] font-bold uppercase tracking-[0.2em]"
+            >Редактировать</a
           >
-            Редактировать
-          </a>
-
           <form
             action="/review/{{ review.id }}/delete"
             method="post"
-            onsubmit="
-              return confirm('ВЫ УВЕРЕНЫ? ЭТО ДЕЙСТВИЕ НЕЛЬЗЯ ОТМЕНИТЬ.');
-            "
+            onsubmit="return confirm('УДАЛИТЬ?');"
           >
             <button
               type="submit"
               class="w-full border border-red-900/20 text-red-900/60 hover:bg-red-950 hover:text-red-500 hover:border-red-500 transition-colors py-3 text-[10px] font-black uppercase tracking-[0.2em]"
             >
-              Удалить запись
+              Удалить
             </button>
           </form>
         </div>
+        {% endif %}
       </div>
     </div>
 
@@ -91,32 +87,22 @@
           {{ review.author }}
         </p>
         <h1
-          class="text-4xl md:text-5xl font-bold text-white uppercase tracking-tighter leading-none mb-6"
+          class="text-4xl md:text-5xl font-bold text-white uppercase tracking-tighter mb-6"
         >
           {{ review.book_title }}
         </h1>
-
         {% if review.description %}
-        <div class="bg-zinc-900/30 border-l-2 border-zinc-700 p-6">
-          <p class="text-[9px] uppercase tracking-widest text-zinc-500 mb-2">
-            О книге
-          </p>
-          <p class="text-xs text-zinc-400 italic leading-relaxed">
-            {{ review.description }}
-          </p>
+        <div
+          class="bg-zinc-900/30 border-l-2 border-zinc-700 p-6 italic text-xs text-zinc-400 leading-relaxed"
+        >
+          {{ review.description }}
         </div>
         {% endif %}
       </div>
-
-      <div class="prose prose-invert max-w-none">
-        <p class="text-[9px] uppercase tracking-[0.2em] text-zinc-500 mb-4">
-          Мысли о прочитанном
-        </p>
-        <div
-          class="text-base md:text-lg text-zinc-200 font-light leading-loose whitespace-pre-line font-serif"
-        >
-          {{ review.text }}
-        </div>
+      <div
+        class="text-base md:text-lg text-zinc-200 font-light leading-loose whitespace-pre-line font-serif"
+      >
+        {{ review.text }}
       </div>
     </div>
   </div>
