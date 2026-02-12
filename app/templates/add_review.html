@@ -10,24 +10,27 @@
   <div class="mb-10 bg-zinc-950 border border-zinc-800 p-6">
     <label
       class="block text-[10px] uppercase tracking-[0.2em] text-zinc-500 mb-3"
-      >Умный поиск</label
+      >Умный поиск (Google Books)</label
     >
     <div class="flex space-x-2">
       <input
         type="text"
         id="search_input"
-        placeholder="НАЗВАНИЕ КНИГИ..."
-        class="flex-grow bg-black border border-zinc-800 p-3 text-xs text-white focus:border-zinc-500 outline-none tracking-widest uppercase"
+        placeholder="ВВЕДИТЕ НАЗВАНИЕ..."
+        class="flex-grow bg-black border border-zinc-800 p-3 text-xs text-white focus:border-zinc-500 outline-none transition tracking-widest uppercase"
       />
       <button
         type="button"
         onclick="searchBook()"
         id="search_btn"
-        class="bg-white text-black px-6 py-3 text-[10px] font-black uppercase tracking-widest hover:bg-zinc-200 transition"
+        class="bg-zinc-100 text-black px-6 py-3 text-[10px] font-black uppercase tracking-widest hover:bg-white transition flex items-center justify-center min-w-[100px]"
       >
         Найти
       </button>
     </div>
+    <p class="text-[9px] text-zinc-600 mt-3 uppercase tracking-wider italic">
+      * Автоматическое заполнение полей
+    </p>
   </div>
 
   <form action="/add" method="post" class="space-y-8">
@@ -41,7 +44,7 @@
           type="text"
           name="book_title"
           required
-          class="w-full bg-black border-b border-zinc-800 p-2 text-white outline-none focus:border-white transition text-sm"
+          class="w-full bg-black border-b border-zinc-800 p-2 text-white focus:border-white outline-none transition text-sm"
         />
       </div>
       <div>
@@ -53,7 +56,7 @@
           type="text"
           name="author"
           required
-          class="w-full bg-black border-b border-zinc-800 p-2 text-white outline-none focus:border-white transition text-sm"
+          class="w-full bg-black border-b border-zinc-800 p-2 text-white focus:border-white outline-none transition text-sm"
         />
       </div>
     </div>
@@ -70,7 +73,7 @@
           min="1"
           max="10"
           required
-          class="w-full bg-black border-b border-zinc-800 p-2 text-white outline-none focus:border-white transition text-sm"
+          class="w-full bg-black border-b border-zinc-800 p-2 text-white focus:border-white outline-none transition text-sm"
         />
       </div>
       <div>
@@ -89,7 +92,11 @@
       </div>
     </div>
 
-    <input type="hidden" name="cover_url" />
+    <input
+      type="hidden"
+      name="cover_url"
+      value="https://placehold.co/400x600/18181b/ffffff?text=NO+COVER"
+    />
     <textarea name="description" class="hidden"></textarea>
 
     <div>
@@ -101,13 +108,13 @@
         name="text"
         rows="8"
         required
-        class="w-full bg-zinc-950 border border-zinc-800 p-4 text-white outline-none focus:border-zinc-600 transition text-sm leading-relaxed"
+        class="w-full bg-zinc-950 border border-zinc-800 p-4 text-white focus:border-zinc-600 outline-none transition text-sm leading-relaxed"
       ></textarea>
     </div>
 
     <button
       type="submit"
-      class="w-full bg-white text-black py-4 text-[10px] font-black uppercase tracking-[0.3em] hover:bg-zinc-200 transition"
+      class="w-full bg-white text-black py-4 text-[10px] font-black uppercase tracking-[0.3em] hover:bg-zinc-200 transition shadow-2xl shadow-white/5"
     >
       Опубликовать
     </button>
@@ -116,23 +123,52 @@
 
 <script>
   async function searchBook() {
-    const input = document.getElementById("search_input");
+    const titleInput = document.getElementById("search_input");
     const btn = document.getElementById("search_btn");
-    if (!input.value) return;
+    const title = titleInput.value;
+
+    if (!title) {
+      alert("ВВЕДИТЕ НАЗВАНИЕ КНИГИ");
+      return;
+    }
+
+    const originalText = btn.innerText;
     btn.innerText = "ПОИСК...";
+    btn.disabled = true;
+    btn.classList.add("opacity-50", "cursor-not-allowed");
+
     try {
-      const resp = await fetch(
-        `/search?title=${encodeURIComponent(input.value)}`,
+      const response = await fetch(
+        `/search?title=${encodeURIComponent(title)}`,
       );
-      const data = await resp.json();
-      if (data.title) {
+      const data = await response.json();
+
+      if (data.error) {
+        alert("КНИГА НЕ НАЙДЕНА. ВВЕДИТЕ ДАННЫЕ ВРУЧНУЮ.");
+      } else {
         document.getElementsByName("book_title")[0].value = data.title;
         document.getElementsByName("author")[0].value = data.author;
-        document.getElementsByName("cover_url")[0].value = data.cover_url;
+
+        let finalCover = data.cover_url;
+
+        if (!finalCover) {
+          finalCover =
+            "https://placehold.co/400x600/18181b/ffffff?text=NO+COVER";
+          alert("Обложка не найдена. Установлена стандартная картинка.");
+        }
+
+        document.getElementsByName("cover_url")[0].value = finalCover;
         document.getElementsByName("description")[0].value = data.description;
+
+        console.log("Успешно заполнено. Обложка:", finalCover);
       }
+    } catch (e) {
+      console.error("Ошибка:", e);
+      alert("ОШИБКА ПРИ ПОДКЛЮЧЕНИИ К СЕРВЕРУ");
     } finally {
-      btn.innerText = "НАЙТИ";
+      btn.innerText = originalText;
+      btn.disabled = false;
+      btn.classList.remove("opacity-50", "cursor-not-allowed");
     }
   }
 </script>
