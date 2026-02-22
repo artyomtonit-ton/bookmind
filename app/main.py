@@ -6,6 +6,8 @@ from sqlalchemy import select
 from sqlalchemy.orm import selectinload
 from jose import JWTError, jwt
 
+from starlette.middleware.sessions import SessionMiddleware
+
 from .database import get_db, engine, Base
 from .models import Review, User
 from .utils import fetch_book_info
@@ -13,7 +15,19 @@ from .auth_utils import hash_password, verify_password, create_access_token
 from .secrets import JWT_SECRET, ALGORITHM
 
 app = FastAPI(title="BookMind")
+app.add_middleware(SessionMiddleware, secret_key=JWT_SECRET)
 templates = Jinja2Templates(directory="app/templates")
+
+
+def flash(request: Request, message: str, category: str = "success"):
+    if "flash_messages" not in request.session:
+        request.session["flash_messages"] = []
+    request.session["flash_messages"].append({"message": message, "category": category})
+
+def get_flashed_messages(request: Request):
+    return request.session.pop("flash_messages", [])
+
+templates.env.globals.update(get_flashed_messages=get_flashed_messages)
 
 async def get_current_user(request: Request, db: AsyncSession = Depends(get_db)):
     token = request.cookies.get("access_token")
@@ -94,6 +108,7 @@ async def login_page(request: Request, user: User = Depends(get_current_user)):
 
 @app.post("/login")
 async def login(
+    request: Request,
     response: Response,
     db: AsyncSession = Depends(get_db),
     username: str = Form(...),
@@ -102,17 +117,23 @@ async def login(
     query = select(User).where(User.username == username)
     result = await db.execute(query)
     user = result.scalar_one_or_none()
+    
     if not user or not verify_password(password, user.hashed_password):
+        flash(request, "Неверный никнейм или пароль", "error")
         return {"error": "Неверные данные"}
+    
     access_token = create_access_token(data={"sub": str(user.id)})
     resp = RedirectResponse(url="/", status_code=303)
     resp.set_cookie(key="access_token", value=access_token, httponly=True)
+    
+    flash(request, f"С возвращением, {user.username}!", "success")
     return resp
 
 @app.get("/logout")
-async def logout():
+async def logout(request: Request):
     resp = RedirectResponse(url="/", status_code=303)
     resp.delete_cookie("access_token")
+    flash(request, "Вы успешно вышли из системы", "success")
     return resp
 
 @app.get("/add", response_class=HTMLResponse)
@@ -127,6 +148,7 @@ async def add_review_page(request: Request, user: User = Depends(get_current_use
 
 @app.post("/add")
 async def create_review(
+    request: Request,
     db: AsyncSession = Depends(get_db),
     user: User = Depends(get_current_user),
     book_title: str = Form(...),
@@ -153,6 +175,8 @@ async def create_review(
     )
     db.add(new_review)
     await db.commit()
+    
+    flash(request, "Новая запись успешно опубликована", "success")
     return RedirectResponse(url="/", status_code=303)
 
 @app.get("/review/{review_id}", response_class=HTMLResponse)
@@ -233,7 +257,8 @@ async def update_review(
 
 @app.post("/review/{review_id}/delete")
 async def delete_review(
-    review_id: int, 
+    review_id: int,
+    request: Request, 
     db: AsyncSession = Depends(get_db),
     user: User = Depends(get_current_user)
 ):
@@ -248,6 +273,8 @@ async def delete_review(
         raise HTTPException(status_code=403, detail="Not your review")
     await db.delete(review)
     await db.commit()
+    
+    flash(request, "Запись удалена навсегда", "success")
     return RedirectResponse(url="/", status_code=303)
 
 @app.get("/profile", response_class=HTMLResponse)

@@ -1,50 +1,31 @@
-{% extends "base.html" %} {% block content %}
+{% extends "base.html" %} 
+
+{% block content %}
 <div class="mb-12">
-  <div
-    class="bg-zinc-950 border border-zinc-800 p-8 md:p-12 flex flex-col md:flex-row items-center md:items-start gap-8"
-  >
-    <div
-      class="w-32 h-32 bg-zinc-900 border-2 border-zinc-800 flex items-center justify-center rounded-full shrink-0"
-    >
-      <span class="text-6xl font-black text-white uppercase"
-        >{{ profile_user.username[0] }}</span
-      >
+  <div class="bg-zinc-950 border border-zinc-800 p-8 md:p-12 flex flex-col md:flex-row items-center md:items-start gap-8">
+    <div class="w-32 h-32 bg-zinc-900 border-2 border-zinc-800 flex items-center justify-center rounded-full shrink-0">
+      <span class="text-6xl font-black text-white uppercase">{{ profile_user.username[0] }}</span>
     </div>
 
     <div class="text-center md:text-left flex-grow">
-      <h1 class="text-4xl font-bold text-white tracking-tighter uppercase mb-2">
-        {{ profile_user.username }}
-      </h1>
-      <p class="text-xs text-zinc-500 uppercase tracking-[0.2em] mb-6">
-        {{ profile_user.email }}
-      </p>
+      <h1 class="text-4xl font-bold text-white tracking-tighter uppercase mb-2">{{ profile_user.username }}</h1>
+      <p class="text-xs text-zinc-500 uppercase tracking-[0.2em] mb-6">{{ profile_user.email }}</p>
 
-      <div
-        class="flex items-center justify-center md:justify-start gap-8 border-t border-zinc-900 pt-6"
-      >
+      <div class="flex items-center justify-center md:justify-start gap-8 border-t border-zinc-900 pt-6">
         <div>
-          <span class="block text-2xl font-bold text-white"
-            >{{ reviews|length }}</span
-          >
-          <span class="text-[9px] uppercase tracking-widest text-zinc-600"
-            >Рецензий</span
-          >
+          <span class="block text-2xl font-bold text-white">{{ reviews|length }}</span>
+          <span class="text-[9px] uppercase tracking-widest text-zinc-600">Рецензий</span>
         </div>
         <div>
-          <span class="block text-2xl font-bold text-zinc-400">2025</span>
-          <span class="text-[9px] uppercase tracking-widest text-zinc-600"
-            >На сайте с</span
-          >
+          <span class="block text-2xl font-bold text-zinc-400">2026</span>
+          <span class="text-[9px] uppercase tracking-widest text-zinc-600">На сайте с</span>
         </div>
       </div>
     </div>
 
     {% if is_own_profile %}
     <div class="shrink-0">
-      <a
-        href="/logout"
-        class="inline-block border border-red-900/30 text-red-900 hover:bg-red-950 hover:text-red-500 px-8 py-3 text-[10px] font-black uppercase tracking-[0.2em] transition"
-      >
+      <a href="/logout" class="inline-block border border-red-900/30 text-red-900 hover:bg-red-950 hover:text-red-500 px-8 py-3 text-[10px] font-black uppercase tracking-[0.2em] transition">
         Выйти
       </a>
     </div>
@@ -54,59 +35,32 @@
 
 <div class="mb-8 flex items-center gap-4">
   <div class="h-px bg-zinc-800 flex-grow"></div>
-  <span class="text-[10px] uppercase tracking-[0.2em] text-zinc-500"
-    >Библиотека пользователя</span
-  >
+  <span class="text-[10px] uppercase tracking-[0.2em] text-zinc-500">Библиотека пользователя</span>
   <div class="h-px bg-zinc-800 flex-grow"></div>
 </div>
 
 <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
   {% for review in reviews %}
-  <a
-    href="/review/{{ review.id }}"
-    class="group flex flex-col bg-zinc-950 border border-zinc-900 p-4 hover:border-zinc-600 transition-colors duration-300"
-  >
+  <a href="/review/{{ review.id }}" class="group flex flex-col bg-zinc-950 border border-zinc-900 p-4 hover:border-zinc-600 transition-colors duration-300">
     <div class="flex gap-4">
       <div class="w-16 h-24 bg-zinc-900 shrink-0">
-        <img
-          src="{{ review.cover_url }}"
-          referrerpolicy="no-referrer"
-          class="w-full h-full object-cover grayscale group-hover:grayscale-0 transition"
-        />
+        <img src="{{ review.cover_url }}" referrerpolicy="no-referrer" class="w-full h-full object-cover grayscale group-hover:grayscale-0 transition" />
       </div>
       <div>
-        <h3
-          class="text-sm font-bold text-white uppercase leading-tight mb-1 group-hover:text-zinc-300"
-        >
-          {{ review.book_title }}
-        </h3>
-        <p class="text-[9px] text-zinc-500 uppercase tracking-widest mb-2">
-          {{ review.author }}
-        </p>
-        <div
-          class="inline-block bg-white text-black px-2 py-0.5 text-[9px] font-black italic"
-        >
-          {{ review.rating }}/10
-        </div>
+        <h3 class="text-sm font-bold text-white uppercase leading-tight mb-1 group-hover:text-zinc-300">{{ review.book_title }}</h3>
+        <p class="text-[9px] text-zinc-500 uppercase tracking-widest mb-2">{{ review.author }}</p>
+        <div class="inline-block bg-white text-black px-2 py-0.5 text-[9px] font-black italic">{{ review.rating }}/10</div>
       </div>
     </div>
     {% if review.description %}
-    <p
-      class="mt-4 text-[10px] text-zinc-600 line-clamp-2 italic leading-relaxed"
-    >
-      {{ review.description }}
-    </p>
+      <p class="mt-4 text-[10px] text-zinc-600 line-clamp-2 italic leading-relaxed">{{ review.description }}</p>
     {% endif %}
   </a>
   {% else %}
   <div class="col-span-full text-center py-20">
-    <p class="text-zinc-600 text-xs uppercase tracking-widest">
-      Пока нет записей
-    </p>
+    <p class="text-zinc-600 text-xs uppercase tracking-widest">Пока нет записей</p>
     {% if is_own_profile %}
-    <a href="/add" class="inline-block mt-4 text-white underline text-xs"
-      >Добавить первую книгу</a
-    >
+      <a href="/add" class="inline-block mt-4 text-white underline text-xs">Добавить первую книгу</a>
     {% endif %}
   </div>
   {% endfor %}
