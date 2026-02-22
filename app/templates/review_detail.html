@@ -2,20 +2,10 @@
 
 {% block content %}
 <style>
-  .custom-scrollbar::-webkit-scrollbar {
-    width: 6px;
-  }
-  .custom-scrollbar::-webkit-scrollbar-track {
-    background: #09090b; 
-    border-radius: 4px;
-  }
-  .custom-scrollbar::-webkit-scrollbar-thumb {
-    background: #27272a; 
-    border-radius: 4px;
-  }
-  .custom-scrollbar::-webkit-scrollbar-thumb:hover {
-    background: #3f3f46; 
-  }
+  .custom-scrollbar::-webkit-scrollbar { width: 6px; }
+  .custom-scrollbar::-webkit-scrollbar-track { background: #09090b; border-radius: 4px; }
+  .custom-scrollbar::-webkit-scrollbar-thumb { background: #27272a; border-radius: 4px; }
+  .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: #3f3f46; }
 </style>
 
 <div class="max-w-5xl mx-auto">
@@ -25,8 +15,7 @@
     </a>
   </div>
 
-  <div class="grid grid-cols-1 lg:grid-cols-12 gap-12 mb-20">
-    
+  <div class="grid grid-cols-1 lg:grid-cols-12 gap-12 mb-10">
     <div class="lg:col-span-4 space-y-8">
       <div class="bg-zinc-950 border border-zinc-800 p-2 relative group">
         <div class="aspect-[2/3] overflow-hidden bg-zinc-900 relative">
@@ -58,13 +47,9 @@
 
         {% if user and user.id == review.user_id %}
         <div class="pt-6 border-t border-zinc-900 mt-6 space-y-3">
-          <a href="/review/{{ review.id }}/edit" class="block w-full text-center border border-zinc-800 text-zinc-400 bg-zinc-900 hover:bg-zinc-800 hover:text-white hover:border-zinc-500 transition-colors py-3 text-[10px] font-bold uppercase tracking-[0.2em]">
-            Редактировать
-          </a>
+          <a href="/review/{{ review.id }}/edit" class="block w-full text-center border border-zinc-800 text-zinc-400 bg-zinc-900 hover:bg-zinc-800 hover:text-white hover:border-zinc-500 transition-colors py-3 text-[10px] font-bold uppercase tracking-[0.2em]">Редактировать</a>
           <form action="/review/{{ review.id }}/delete" method="post" onsubmit="return confirm('ВЫ УВЕРЕНЫ? ЭТО ДЕЙСТВИЕ НЕЛЬЗЯ ОТМЕНИТЬ.');">
-            <button type="submit" class="w-full border border-red-900/20 text-red-900/60 hover:bg-red-950 hover:text-red-500 hover:border-red-500 transition-colors py-3 text-[10px] font-black uppercase tracking-[0.2em]">
-              Удалить запись
-            </button>
+            <button type="submit" class="w-full border border-red-900/20 text-red-900/60 hover:bg-red-950 hover:text-red-500 hover:border-red-500 transition-colors py-3 text-[10px] font-black uppercase tracking-[0.2em]">Удалить запись</button>
           </form>
         </div>
         {% endif %}
@@ -88,12 +73,23 @@
         <p class="text-[9px] uppercase tracking-[0.2em] text-zinc-500 mb-4">Мысли о прочитанном</p>
         <div class="text-base md:text-lg text-zinc-200 font-light leading-loose whitespace-pre-line font-serif">{{ review.text }}</div>
       </div>
-    </div>
 
+      <div class="flex items-center mt-10 border-t border-zinc-900 pt-6">
+        {% set user_liked = user and user.id in review.likes|map(attribute='user_id')|list %}
+        <form action="/review/{{ review.id }}/like" method="post">
+            <button type="submit" class="group flex items-center gap-3 outline-none {% if user_liked %}text-white{% else %}text-zinc-500 hover:text-white{% endif %} transition-colors">
+                <svg class="w-7 h-7 transition-transform group-hover:scale-110 group-active:scale-90 {% if user_liked %}fill-current{% else %}fill-transparent stroke-current stroke-2{% endif %}" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/>
+                </svg>
+                <span class="text-lg font-bold">{{ review.likes|length }}</span>
+            </button>
+        </form>
+      </div>
+
+    </div>
   </div> 
 
   <div class="max-w-3xl mx-auto border-t border-zinc-900 pt-16">
-    
     <div class="mb-12 text-center">
       <h2 class="text-2xl font-bold text-white uppercase tracking-widest mb-2">Обсуждение ({{ review.comments|length }})</h2>
       <div class="h-1 w-12 bg-zinc-800 mx-auto"></div>
@@ -106,14 +102,7 @@
                 {{ user.username[0] }}
             </div>
             <div class="flex-grow">
-                <textarea 
-                    name="text" 
-                    rows="1" 
-                    required 
-                    placeholder="Добавьте комментарий..." 
-                    class="w-full bg-transparent border-b border-zinc-700 pb-2 text-white focus:border-white outline-none transition-colors text-sm resize-none overflow-hidden"
-                    oninput="this.style.height = ''; this.style.height = this.scrollHeight + 'px'"
-                ></textarea>
+                <textarea name="text" rows="1" required placeholder="Добавьте комментарий..." class="w-full bg-transparent border-b border-zinc-700 pb-2 text-white focus:border-white outline-none transition-colors text-sm resize-none overflow-hidden" oninput="this.style.height = ''; this.style.height = this.scrollHeight + 'px'"></textarea>
                 <div class="flex justify-end mt-4">
                     <button type="submit" class="bg-white text-black px-6 py-2 text-[10px] font-black uppercase tracking-[0.2em] hover:bg-zinc-200 transition rounded-sm">Отправить</button>
                 </div>
@@ -135,12 +124,8 @@
             </div>
             <div class="flex-grow">
                 <div class="flex items-baseline justify-between mb-3 border-b border-zinc-900 pb-2">
-                    <a href="/user/{{ comment.user.username }}" class="text-xs font-bold text-white uppercase tracking-widest hover:text-zinc-400 transition">
-                        {{ comment.user.username }}
-                    </a>
-                    <span class="text-[9px] text-zinc-600 uppercase tracking-widest">
-                        {{ comment.created_at.strftime('%d.%m.%Y %H:%M') if comment.created_at else '' }}
-                    </span>
+                    <a href="/user/{{ comment.user.username }}" class="text-xs font-bold text-white uppercase tracking-widest hover:text-zinc-400 transition">{{ comment.user.username }}</a>
+                    <span class="text-[9px] text-zinc-600 uppercase tracking-widest">{{ comment.created_at.strftime('%d.%m.%Y %H:%M') if comment.created_at else '' }}</span>
                 </div>
                 <p class="text-sm text-zinc-300 font-light leading-relaxed whitespace-pre-line">{{ comment.text }}</p>
             </div>
@@ -151,8 +136,6 @@
         </div>
         {% endfor %}
     </div>
-
   </div>
-
 </div>
 {% endblock %}

@@ -12,7 +12,8 @@ class User(Base):
     hashed_password = Column(String, nullable=False)
     
     reviews = relationship("Review", back_populates="owner")
-    comments = relationship("Comment", back_populates="user") # НОВОЕ
+    comments = relationship("Comment", back_populates="user")
+    likes = relationship("Like", back_populates="user", cascade="all, delete-orphan")
 
 class Review(Base):
     __tablename__ = "reviews"
@@ -29,7 +30,8 @@ class Review(Base):
     
     user_id = Column(Integer, ForeignKey("users.id"))
     owner = relationship("User", back_populates="reviews")
-    comments = relationship("Comment", back_populates="review", cascade="all, delete-orphan") # НОВОЕ
+    comments = relationship("Comment", back_populates="review", cascade="all, delete-orphan")
+    likes = relationship("Like", back_populates="review", cascade="all, delete-orphan")
 
 class Comment(Base):
     __tablename__ = "comments"
@@ -43,3 +45,13 @@ class Comment(Base):
 
     user = relationship("User", back_populates="comments")
     review = relationship("Review", back_populates="comments")
+
+class Like(Base):
+    __tablename__ = "likes"
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id"))
+    review_id = Column(Integer, ForeignKey("reviews.id"))
+
+    user = relationship("User", back_populates="likes")
+    review = relationship("Review", back_populates="likes")

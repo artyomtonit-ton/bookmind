@@ -5,11 +5,10 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 from sqlalchemy.orm import selectinload
 from jose import JWTError, jwt
-
 from starlette.middleware.sessions import SessionMiddleware
 
 from .database import get_db, engine, Base
-from .models import Review, User, Comment
+from .models import Review, User, Comment, Like
 from .utils import fetch_book_info
 from .auth_utils import hash_password, verify_password, create_access_token
 from .secrets import JWT_SECRET, ALGORITHM
@@ -49,13 +48,17 @@ async def startup():
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
 
+
 @app.get("/", response_class=HTMLResponse)
 async def read_root(
     request: Request, 
     db: AsyncSession = Depends(get_db),
     user: User = Depends(get_current_user)
 ):
-    query = select(Review).order_by(Review.created_at.desc()).options(selectinload(Review.owner))
+    query = select(Review).order_by(Review.created_at.desc()).options(
+        selectinload(Review.owner),
+        selectinload(Review.likes)
+    )
     result = await db.execute(query)
     reviews = result.scalars().all()
     
@@ -73,13 +76,10 @@ async def search_book(title: str):
     book_data = await fetch_book_info(title)
     return book_data if book_data else {"error": "Книга не найдена"}
 
+
 @app.get("/register", response_class=HTMLResponse)
 async def register_page(request: Request, user: User = Depends(get_current_user)):
-    return templates.TemplateResponse("register.html", {
-        "request": request, 
-        "title": "Регистрация",
-        "user": user
-    })
+    return templates.TemplateResponse("register.html", {"request": request, "title": "Регистрация", "user": user})
 
 @app.post("/register")
 async def register_user(
@@ -100,11 +100,7 @@ async def register_user(
 
 @app.get("/login", response_class=HTMLResponse)
 async def login_page(request: Request, user: User = Depends(get_current_user)):
-    return templates.TemplateResponse("login.html", {
-        "request": request, 
-        "title": "Вход",
-        "user": user
-    })
+    return templates.TemplateResponse("login.html", {"request": request, "title": "Вход", "user": user})
 
 @app.post("/login")
 async def login(
@@ -120,7 +116,7 @@ async def login(
     
     if not user or not verify_password(password, user.hashed_password):
         flash(request, "Неверный никнейм или пароль", "error")
-        return {"error": "Неверные данные"}
+        return RedirectResponse(url="/login", status_code=303)
     
     access_token = create_access_token(data={"sub": str(user.id)})
     resp = RedirectResponse(url="/", status_code=303)
@@ -136,15 +132,12 @@ async def logout(request: Request):
     flash(request, "Вы успешно вышли из системы", "success")
     return resp
 
+
 @app.get("/add", response_class=HTMLResponse)
 async def add_review_page(request: Request, user: User = Depends(get_current_user)):
     if not user:
         return RedirectResponse(url="/login")
-    return templates.TemplateResponse("add_review.html", {
-        "request": request, 
-        "title": "Новая мысль",
-        "user": user
-    })
+    return templates.TemplateResponse("add_review.html", {"request": request, "title": "Новая мысль", "user": user})
 
 @app.post("/add")
 async def create_review(
@@ -161,8 +154,10 @@ async def create_review(
 ):
     if not user:
         return RedirectResponse(url="/login", status_code=303)
+    
     if not cover_url:
         cover_url = "https://placehold.co/400x600/18181b/ffffff?text=NO+COVER"
+        
     new_review = Review(
         book_title=book_title,
         author=author,
@@ -188,7 +183,8 @@ async def read_review(
 ):
     query = select(Review).where(Review.id == review_id).options(
         selectinload(Review.owner),
-        selectinload(Review.comments).selectinload(Comment.user)
+        selectinload(Review.comments).selectinload(Comment.user),
+        selectinload(Review.likes)
     )
     result = await db.execute(query)
     review = result.scalar_one_or_none()
@@ -203,37 +199,6 @@ async def read_review(
         "user": user
     })
 
-@app.post("/review/{review_id}/comment")
-async def add_comment(
-    review_id: int,
-    request: Request,
-    text: str = Form(...),
-    db: AsyncSession = Depends(get_db),
-    user: User = Depends(get_current_user)
-):
-    if not user:
-        flash(request, "ВОЙДИТЕ, ЧТОБЫ ОСТАВИТЬ КОММЕНТАРИЙ", "error")
-        return RedirectResponse(url="/login", status_code=303)
-
-    query = select(Review).where(Review.id == review_id)
-    result = await db.execute(query)
-    review = result.scalar_one_or_none()
-    
-    if not review:
-        raise HTTPException(status_code=404, detail="Review not found")
-
-    new_comment = Comment(
-        text=text,
-        user_id=user.id,
-        review_id=review_id
-    )
-    
-    db.add(new_comment)
-    await db.commit()
-    
-    flash(request, "КОММЕНТАРИЙ ОПУБЛИКОВАН", "success")
-    return RedirectResponse(url=f"/review/{review_id}", status_code=303)
-
 @app.get("/review/{review_id}/edit", response_class=HTMLResponse)
 async def edit_review_page(
     review_id: int, 
@@ -243,13 +208,16 @@ async def edit_review_page(
 ):
     if not user:
         return RedirectResponse(url="/login")
+    
     query = select(Review).where(Review.id == review_id)
     result = await db.execute(query)
     review = result.scalar_one_or_none()
+    
     if not review:
         raise HTTPException(status_code=404, detail="Review not found")
     if review.user_id != user.id:
         raise HTTPException(status_code=403, detail="Not your review")
+        
     return templates.TemplateResponse("edit_review.html", {
         "request": request, 
         "review": review, 
@@ -272,15 +240,19 @@ async def update_review(
 ):
     if not user:
         raise HTTPException(status_code=401)
+
     query = select(Review).where(Review.id == review_id)
     result = await db.execute(query)
     review = result.scalar_one_or_none()
+    
     if not review:
         raise HTTPException(status_code=404, detail="Review not found")
     if review.user_id != user.id:
         raise HTTPException(status_code=403, detail="Not your review")
+    
     if not cover_url:
         cover_url = "https://placehold.co/400x600/18181b/ffffff?text=NO+COVER"
+
     review.book_title = book_title
     review.author = author
     review.rating = rating
@@ -288,6 +260,7 @@ async def update_review(
     review.description = description
     review.cover_url = cover_url
     review.status = status
+    
     await db.commit()
     return RedirectResponse(url=f"/review/{review_id}", status_code=303)
 
@@ -300,18 +273,81 @@ async def delete_review(
 ):
     if not user:
         raise HTTPException(status_code=401, detail="Log in first")
+        
     query = select(Review).where(Review.id == review_id)
     result = await db.execute(query)
     review = result.scalar_one_or_none()
+    
     if not review:
         raise HTTPException(status_code=404, detail="Review not found")
     if review.user_id != user.id:
         raise HTTPException(status_code=403, detail="Not your review")
+        
     await db.delete(review)
     await db.commit()
     
     flash(request, "Запись удалена навсегда", "success")
     return RedirectResponse(url="/", status_code=303)
+
+
+@app.post("/review/{review_id}/comment")
+async def add_comment(
+    review_id: int,
+    request: Request,
+    text: str = Form(...),
+    db: AsyncSession = Depends(get_db),
+    user: User = Depends(get_current_user)
+):
+    if not user:
+        flash(request, "ВОЙДИТЕ, ЧТОБЫ ОСТАВИТЬ КОММЕНТАРИЙ", "error")
+        return RedirectResponse(url="/login", status_code=303)
+
+    query = select(Review).where(Review.id == review_id)
+    result = await db.execute(query)
+    review = result.scalar_one_or_none()
+    
+    if not review:
+        raise HTTPException(status_code=404, detail="Review not found")
+
+    new_comment = Comment(text=text, user_id=user.id, review_id=review_id)
+    db.add(new_comment)
+    await db.commit()
+    
+    flash(request, "КОММЕНТАРИЙ ОПУБЛИКОВАН", "success")
+    return RedirectResponse(url=f"/review/{review_id}", status_code=303)
+
+@app.post("/review/{review_id}/like")
+async def toggle_like(
+    review_id: int,
+    request: Request,
+    db: AsyncSession = Depends(get_db),
+    user: User = Depends(get_current_user)
+):
+    if not user:
+        flash(request, "ВОЙДИТЕ, ЧТОБЫ ОЦЕНИТЬ ЗАПИСЬ", "error")
+        return RedirectResponse(url="/login", status_code=303)
+
+    query_review = select(Review).where(Review.id == review_id)
+    result_review = await db.execute(query_review)
+    if not result_review.scalar_one_or_none():
+        raise HTTPException(status_code=404, detail="Review not found")
+
+    query_like = select(Like).where(Like.user_id == user.id, Like.review_id == review_id)
+    result_like = await db.execute(query_like)
+    existing_like = result_like.scalar_one_or_none()
+
+    if existing_like:
+        await db.delete(existing_like)
+    else:
+        new_like = Like(user_id=user.id, review_id=review_id)
+        db.add(new_like)
+        
+    await db.commit()
+
+    referer = request.headers.get("referer")
+    redirect_url = referer if referer else f"/review/{review_id}"
+    return RedirectResponse(url=redirect_url, status_code=303)
+
 
 @app.get("/profile", response_class=HTMLResponse)
 async def read_my_profile(
@@ -321,9 +357,14 @@ async def read_my_profile(
 ):
     if not user:
         return RedirectResponse(url="/login", status_code=303)
-    query = select(Review).where(Review.user_id == user.id).order_by(Review.created_at.desc())
+    
+    query = select(Review).where(Review.user_id == user.id).order_by(Review.created_at.desc()).options(
+        selectinload(Review.owner),
+        selectinload(Review.likes)
+    )
     result = await db.execute(query)
     my_reviews = result.scalars().all()
+    
     return templates.TemplateResponse("profile.html", {
         "request": request, 
         "user": user, 
@@ -340,12 +381,18 @@ async def read_public_profile(
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
-    query = select(User).where(User.username == username).options(selectinload(User.reviews))
+    query = select(User).where(User.username == username).options(
+        selectinload(User.reviews).selectinload(Review.likes),
+        selectinload(User.reviews).selectinload(Review.owner)
+    )
     result = await db.execute(query)
     profile_user = result.scalar_one_or_none()
+    
     if not profile_user:
         raise HTTPException(status_code=404, detail="User not found")
+        
     reviews = sorted(profile_user.reviews, key=lambda r: r.created_at, reverse=True)
+
     return templates.TemplateResponse("profile.html", {
         "request": request,
         "user": current_user,

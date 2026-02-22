@@ -41,21 +41,40 @@
 
 <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
   {% for review in reviews %}
-  <a href="/review/{{ review.id }}" class="group flex flex-col bg-zinc-950 border border-zinc-900 p-4 hover:border-zinc-600 transition-colors duration-300">
-    <div class="flex gap-4">
+  <div class="group flex flex-col bg-zinc-950 border border-zinc-900 p-4 hover:border-zinc-600 transition-colors duration-300">
+    
+    <a href="/review/{{ review.id }}" class="flex gap-4">
       <div class="w-16 h-24 bg-zinc-900 shrink-0">
         <img src="{{ review.cover_url }}" referrerpolicy="no-referrer" class="w-full h-full object-cover grayscale group-hover:grayscale-0 transition" />
       </div>
-      <div>
+      <div class="flex flex-col items-start w-full">
         <h3 class="text-sm font-bold text-white uppercase leading-tight mb-1 group-hover:text-zinc-300">{{ review.book_title }}</h3>
-        <p class="text-[9px] text-zinc-500 uppercase tracking-widest mb-2">{{ review.author }}</p>
+        <p class="text-[9px] text-zinc-500 uppercase tracking-widest mb-3">{{ review.author }}</p>
         <div class="inline-block bg-white text-black px-2 py-0.5 text-[9px] font-black italic">{{ review.rating }}/10</div>
       </div>
+    </a>
+
+    <div class="mt-4 pt-4 border-t border-zinc-900 flex items-end justify-between flex-grow">
+      <a href="/review/{{ review.id }}" class="block flex-grow pr-4">
+        {% if review.description %}
+          <p class="text-[10px] text-zinc-600 line-clamp-2 italic leading-relaxed">{{ review.description }}</p>
+        {% endif %}
+      </a>
+      
+      <div class="shrink-0">
+        {% set user_liked = user and user.id in review.likes|map(attribute='user_id')|list %}
+        <form action="/review/{{ review.id }}/like" method="post" class="m-0 p-0">
+            <button type="submit" class="group/like flex items-center gap-1.5 outline-none {% if user_liked %}text-white{% else %}text-zinc-600 hover:text-white{% endif %} transition-colors">
+              <svg class="w-3.5 h-3.5 transition-transform group-hover/like:scale-110 group-active/like:scale-90 {% if user_liked %}fill-current{% else %}fill-transparent stroke-current stroke-2{% endif %}" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                  <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/>
+              </svg>
+              <span class="text-[10px] font-bold">{{ review.likes|length }}</span>
+            </button>
+        </form>
+      </div>
     </div>
-    {% if review.description %}
-      <p class="mt-4 text-[10px] text-zinc-600 line-clamp-2 italic leading-relaxed">{{ review.description }}</p>
-    {% endif %}
-  </a>
+    
+  </div>
   {% else %}
   <div class="col-span-full text-center py-20">
     <p class="text-zinc-600 text-xs uppercase tracking-widest">Пока нет записей</p>
