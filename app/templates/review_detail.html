@@ -1,6 +1,23 @@
 {% extends "base.html" %} 
 
 {% block content %}
+<style>
+  .custom-scrollbar::-webkit-scrollbar {
+    width: 6px;
+  }
+  .custom-scrollbar::-webkit-scrollbar-track {
+    background: #09090b; 
+    border-radius: 4px;
+  }
+  .custom-scrollbar::-webkit-scrollbar-thumb {
+    background: #27272a; 
+    border-radius: 4px;
+  }
+  .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+    background: #3f3f46; 
+  }
+</style>
+
 <div class="max-w-5xl mx-auto">
   <div class="mb-8">
     <a href="/" class="text-[10px] uppercase tracking-widest text-zinc-500 hover:text-white transition flex items-center gap-2">
@@ -8,7 +25,8 @@
     </a>
   </div>
 
-  <div class="grid grid-cols-1 lg:grid-cols-12 gap-12">
+  <div class="grid grid-cols-1 lg:grid-cols-12 gap-12 mb-20">
+    
     <div class="lg:col-span-4 space-y-8">
       <div class="bg-zinc-950 border border-zinc-800 p-2 relative group">
         <div class="aspect-[2/3] overflow-hidden bg-zinc-900 relative">
@@ -71,6 +89,70 @@
         <div class="text-base md:text-lg text-zinc-200 font-light leading-loose whitespace-pre-line font-serif">{{ review.text }}</div>
       </div>
     </div>
+
+  </div> 
+
+  <div class="max-w-3xl mx-auto border-t border-zinc-900 pt-16">
+    
+    <div class="mb-12 text-center">
+      <h2 class="text-2xl font-bold text-white uppercase tracking-widest mb-2">Обсуждение ({{ review.comments|length }})</h2>
+      <div class="h-1 w-12 bg-zinc-800 mx-auto"></div>
+    </div>
+
+    {% if user %}
+    <form action="/review/{{ review.id }}/comment" method="post" class="mb-16">
+        <div class="flex gap-4 items-start">
+            <div class="w-10 h-10 rounded-full bg-zinc-800 flex items-center justify-center text-sm font-bold text-white shrink-0 mt-1">
+                {{ user.username[0] }}
+            </div>
+            <div class="flex-grow">
+                <textarea 
+                    name="text" 
+                    rows="1" 
+                    required 
+                    placeholder="Добавьте комментарий..." 
+                    class="w-full bg-transparent border-b border-zinc-700 pb-2 text-white focus:border-white outline-none transition-colors text-sm resize-none overflow-hidden"
+                    oninput="this.style.height = ''; this.style.height = this.scrollHeight + 'px'"
+                ></textarea>
+                <div class="flex justify-end mt-4">
+                    <button type="submit" class="bg-white text-black px-6 py-2 text-[10px] font-black uppercase tracking-[0.2em] hover:bg-zinc-200 transition rounded-sm">Отправить</button>
+                </div>
+            </div>
+        </div>
+    </form>
+    {% else %}
+    <div class="mb-16 p-8 bg-zinc-950 border border-zinc-900 text-center">
+        <p class="text-xs text-zinc-500 uppercase tracking-[0.2em] mb-4">Присоединяйтесь к дискуссии</p>
+        <a href="/login" class="inline-block bg-white text-black px-8 py-3 text-[10px] font-black uppercase tracking-widest hover:bg-zinc-200 transition">Войти в аккаунт</a>
+    </div>
+    {% endif %}
+
+    <div class="space-y-8 max-h-[600px] overflow-y-auto custom-scrollbar pr-6">
+        {% for comment in review.comments %}
+        <div class="flex gap-5 bg-zinc-950/50 p-6 border border-zinc-900">
+            <div class="w-12 h-12 rounded-full bg-zinc-900 border border-zinc-800 flex items-center justify-center text-lg font-bold text-zinc-400 shrink-0">
+                {{ comment.user.username[0] }}
+            </div>
+            <div class="flex-grow">
+                <div class="flex items-baseline justify-between mb-3 border-b border-zinc-900 pb-2">
+                    <a href="/user/{{ comment.user.username }}" class="text-xs font-bold text-white uppercase tracking-widest hover:text-zinc-400 transition">
+                        {{ comment.user.username }}
+                    </a>
+                    <span class="text-[9px] text-zinc-600 uppercase tracking-widest">
+                        {{ comment.created_at.strftime('%d.%m.%Y %H:%M') if comment.created_at else '' }}
+                    </span>
+                </div>
+                <p class="text-sm text-zinc-300 font-light leading-relaxed whitespace-pre-line">{{ comment.text }}</p>
+            </div>
+        </div>
+        {% else %}
+        <div class="text-center py-12 border border-zinc-900 border-dashed">
+            <p class="text-[10px] text-zinc-600 uppercase tracking-widest italic">Пока нет комментариев. Будьте первым.</p>
+        </div>
+        {% endfor %}
+    </div>
+
   </div>
+
 </div>
 {% endblock %}

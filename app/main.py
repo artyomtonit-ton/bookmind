@@ -9,7 +9,7 @@ from jose import JWTError, jwt
 from starlette.middleware.sessions import SessionMiddleware
 
 from .database import get_db, engine, Base
-from .models import Review, User
+from .models import Review, User, Comment
 from .utils import fetch_book_info
 from .auth_utils import hash_password, verify_password, create_access_token
 from .secrets import JWT_SECRET, ALGORITHM
@@ -186,17 +186,53 @@ async def read_review(
     db: AsyncSession = Depends(get_db),
     user: User = Depends(get_current_user)
 ):
-    query = select(Review).where(Review.id == review_id).options(selectinload(Review.owner))
+    query = select(Review).where(Review.id == review_id).options(
+        selectinload(Review.owner),
+        selectinload(Review.comments).selectinload(Comment.user)
+    )
     result = await db.execute(query)
     review = result.scalar_one_or_none()
+    
     if not review:
         raise HTTPException(status_code=404, detail="Review not found")
+        
     return templates.TemplateResponse("review_detail.html", {
         "request": request, 
         "review": review, 
         "title": review.book_title,
         "user": user
     })
+
+@app.post("/review/{review_id}/comment")
+async def add_comment(
+    review_id: int,
+    request: Request,
+    text: str = Form(...),
+    db: AsyncSession = Depends(get_db),
+    user: User = Depends(get_current_user)
+):
+    if not user:
+        flash(request, "ВОЙДИТЕ, ЧТОБЫ ОСТАВИТЬ КОММЕНТАРИЙ", "error")
+        return RedirectResponse(url="/login", status_code=303)
+
+    query = select(Review).where(Review.id == review_id)
+    result = await db.execute(query)
+    review = result.scalar_one_or_none()
+    
+    if not review:
+        raise HTTPException(status_code=404, detail="Review not found")
+
+    new_comment = Comment(
+        text=text,
+        user_id=user.id,
+        review_id=review_id
+    )
+    
+    db.add(new_comment)
+    await db.commit()
+    
+    flash(request, "КОММЕНТАРИЙ ОПУБЛИКОВАН", "success")
+    return RedirectResponse(url=f"/review/{review_id}", status_code=303)
 
 @app.get("/review/{review_id}/edit", response_class=HTMLResponse)
 async def edit_review_page(

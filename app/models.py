@@ -10,7 +10,9 @@ class User(Base):
     username = Column(String, unique=True, nullable=False)
     email = Column(String, unique=True, nullable=False)
     hashed_password = Column(String, nullable=False)
+    
     reviews = relationship("Review", back_populates="owner")
+    comments = relationship("Comment", back_populates="user") # НОВОЕ
 
 class Review(Base):
     __tablename__ = "reviews"
@@ -24,5 +26,20 @@ class Review(Base):
     cover_url = Column(String)
     status = Column(String)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
+    
     user_id = Column(Integer, ForeignKey("users.id"))
     owner = relationship("User", back_populates="reviews")
+    comments = relationship("Comment", back_populates="review", cascade="all, delete-orphan") # НОВОЕ
+
+class Comment(Base):
+    __tablename__ = "comments"
+
+    id = Column(Integer, primary_key=True, index=True)
+    text = Column(Text, nullable=False)
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    
+    user_id = Column(Integer, ForeignKey("users.id"))
+    review_id = Column(Integer, ForeignKey("reviews.id"))
+
+    user = relationship("User", back_populates="comments")
+    review = relationship("Review", back_populates="comments")
