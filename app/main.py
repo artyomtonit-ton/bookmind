@@ -12,11 +12,12 @@ from .models import Review, User, Comment, Like
 from .utils import fetch_book_info
 from .auth_utils import hash_password, verify_password, create_access_token
 from .secrets import JWT_SECRET, ALGORITHM
+from pydantic import ValidationError
+from .schemas import UserCreate, ReviewCreate
 
 app = FastAPI(title="BookMind")
 app.add_middleware(SessionMiddleware, secret_key=JWT_SECRET)
 templates = Jinja2Templates(directory="app/templates")
-
 
 def flash(request: Request, message: str, category: str = "success"):
     if "flash_messages" not in request.session:
@@ -48,7 +49,6 @@ async def startup():
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
 
-
 @app.get("/", response_class=HTMLResponse)
 async def read_root(
     request: Request, 
@@ -61,7 +61,6 @@ async def read_root(
     )
     result = await db.execute(query)
     reviews = result.scalars().all()
-    
     return templates.TemplateResponse("index.html", {
         "request": request, 
         "title": "Лента", 
@@ -76,26 +75,43 @@ async def search_book(title: str):
     book_data = await fetch_book_info(title)
     return book_data if book_data else {"error": "Книга не найдена"}
 
-
 @app.get("/register", response_class=HTMLResponse)
 async def register_page(request: Request, user: User = Depends(get_current_user)):
     return templates.TemplateResponse("register.html", {"request": request, "title": "Регистрация", "user": user})
 
 @app.post("/register")
 async def register_user(
+    request: Request,
     db: AsyncSession = Depends(get_db),
     username: str = Form(...),
     email: str = Form(...),
     password: str = Form(...)
 ):
-    hashed_pw = hash_password(password)
-    new_user = User(username=username, email=email, hashed_password=hashed_pw)
+    try:
+        user_data = UserCreate(username=username, email=email, password=password)
+    except ValidationError as e:
+        error_msg = e.errors()[0]['msg']
+        if "value is not a valid email" in str(e):
+            error_msg = "Некорректный формат Email"
+        elif "String should have at least 6 characters" in str(e):
+            error_msg = "Пароль должен быть минимум 6 символов"
+        elif "String should match pattern" in str(e):
+            error_msg = "Никнейм должен содержать только англ. буквы и цифры"
+        flash(request, f"ОШИБКА: {error_msg}", "error")
+        return RedirectResponse(url="/register", status_code=303)
+
+    hashed_pw = hash_password(user_data.password)
+    new_user = User(username=user_data.username, email=user_data.email, hashed_password=hashed_pw)
+    
     try:
         db.add(new_user)
         await db.commit()
     except Exception:
         await db.rollback()
-        return {"error": "Имя или email заняты"}
+        flash(request, "ОШИБКА: ИМЯ ИЛИ EMAIL УЖЕ ЗАНЯТЫ", "error")
+        return RedirectResponse(url="/register", status_code=303)
+        
+    flash(request, "РЕГИСТРАЦИЯ УСПЕШНА. ВОЙДИТЕ В АККАУНТ.", "success")
     return RedirectResponse(url="/login", status_code=303)
 
 @app.get("/login", response_class=HTMLResponse)
@@ -121,7 +137,6 @@ async def login(
     access_token = create_access_token(data={"sub": str(user.id)})
     resp = RedirectResponse(url="/", status_code=303)
     resp.set_cookie(key="access_token", value=access_token, httponly=True)
-    
     flash(request, f"С возвращением, {user.username}!", "success")
     return resp
 
@@ -131,7 +146,6 @@ async def logout(request: Request):
     resp.delete_cookie("access_token")
     flash(request, "Вы успешно вышли из системы", "success")
     return resp
-
 
 @app.get("/add", response_class=HTMLResponse)
 async def add_review_page(request: Request, user: User = Depends(get_current_user)):
@@ -153,25 +167,44 @@ async def create_review(
     status: str = Form(...)
 ):
     if not user:
+        flash(request, "СНАЧАЛА ВОЙДИТЕ В АККАУНТ", "error")
         return RedirectResponse(url="/login", status_code=303)
-    
+        
     if not cover_url:
         cover_url = "https://placehold.co/400x600/18181b/ffffff?text=NO+COVER"
-        
+
+    try:
+        review_data = ReviewCreate(
+            book_title=book_title,
+            author=author,
+            rating=rating,
+            text=text,
+            description=description,
+            cover_url=cover_url,
+            status=status
+        )
+    except ValidationError as e:
+        error_msg = e.errors()[0]['msg']
+        if "Input should be greater than or equal to 1" in str(e) or "Input should be less than or equal to 10" in str(e):
+             error_msg = "Оценка должна быть от 1 до 10"
+        elif "String should have at least 10 characters" in str(e):
+             error_msg = "Текст рецензии слишком короткий"
+        flash(request, f"ОШИБКА: {error_msg}", "error")
+        return RedirectResponse(url="/add", status_code=303)
+
     new_review = Review(
-        book_title=book_title,
-        author=author,
-        rating=rating,
-        text=text,
-        description=description,
-        cover_url=cover_url,
-        status=status,
+        book_title=review_data.book_title,
+        author=review_data.author,
+        rating=review_data.rating,
+        text=review_data.text,
+        description=review_data.description,
+        cover_url=review_data.cover_url,
+        status=review_data.status,
         user_id=user.id
     )
     db.add(new_review)
     await db.commit()
-    
-    flash(request, "Новая запись успешно опубликована", "success")
+    flash(request, "НОВАЯ ЗАПИСЬ ОПУБЛИКОВАНА", "success")
     return RedirectResponse(url="/", status_code=303)
 
 @app.get("/review/{review_id}", response_class=HTMLResponse)
@@ -188,10 +221,8 @@ async def read_review(
     )
     result = await db.execute(query)
     review = result.scalar_one_or_none()
-    
     if not review:
         raise HTTPException(status_code=404, detail="Review not found")
-        
     return templates.TemplateResponse("review_detail.html", {
         "request": request, 
         "review": review, 
@@ -208,16 +239,13 @@ async def edit_review_page(
 ):
     if not user:
         return RedirectResponse(url="/login")
-    
     query = select(Review).where(Review.id == review_id)
     result = await db.execute(query)
     review = result.scalar_one_or_none()
-    
     if not review:
         raise HTTPException(status_code=404, detail="Review not found")
     if review.user_id != user.id:
         raise HTTPException(status_code=403, detail="Not your review")
-        
     return templates.TemplateResponse("edit_review.html", {
         "request": request, 
         "review": review, 
@@ -228,6 +256,7 @@ async def edit_review_page(
 @app.post("/review/{review_id}/edit")
 async def update_review(
     review_id: int,
+    request: Request,
     db: AsyncSession = Depends(get_db),
     user: User = Depends(get_current_user),
     book_title: str = Form(...),
@@ -240,27 +269,42 @@ async def update_review(
 ):
     if not user:
         raise HTTPException(status_code=401)
-
     query = select(Review).where(Review.id == review_id)
     result = await db.execute(query)
     review = result.scalar_one_or_none()
-    
     if not review:
         raise HTTPException(status_code=404, detail="Review not found")
     if review.user_id != user.id:
         raise HTTPException(status_code=403, detail="Not your review")
-    
     if not cover_url:
         cover_url = "https://placehold.co/400x600/18181b/ffffff?text=NO+COVER"
 
-    review.book_title = book_title
-    review.author = author
-    review.rating = rating
-    review.text = text
-    review.description = description
-    review.cover_url = cover_url
-    review.status = status
-    
+    try:
+        review_data = ReviewCreate(
+            book_title=book_title,
+            author=author,
+            rating=rating,
+            text=text,
+            description=description,
+            cover_url=cover_url,
+            status=status
+        )
+    except ValidationError as e:
+        error_msg = e.errors()[0]['msg']
+        if "Input should be greater than or equal to 1" in str(e) or "Input should be less than or equal to 10" in str(e):
+             error_msg = "Оценка должна быть от 1 до 10"
+        elif "String should have at least 10 characters" in str(e):
+             error_msg = "Текст рецензии слишком короткий"
+        flash(request, f"ОШИБКА: {error_msg}", "error")
+        return RedirectResponse(url=f"/review/{review_id}/edit", status_code=303)
+
+    review.book_title = review_data.book_title
+    review.author = review_data.author
+    review.rating = review_data.rating
+    review.text = review_data.text
+    review.description = review_data.description
+    review.cover_url = review_data.cover_url
+    review.status = review_data.status
     await db.commit()
     return RedirectResponse(url=f"/review/{review_id}", status_code=303)
 
@@ -273,22 +317,17 @@ async def delete_review(
 ):
     if not user:
         raise HTTPException(status_code=401, detail="Log in first")
-        
     query = select(Review).where(Review.id == review_id)
     result = await db.execute(query)
     review = result.scalar_one_or_none()
-    
     if not review:
         raise HTTPException(status_code=404, detail="Review not found")
     if review.user_id != user.id:
         raise HTTPException(status_code=403, detail="Not your review")
-        
     await db.delete(review)
     await db.commit()
-    
     flash(request, "Запись удалена навсегда", "success")
     return RedirectResponse(url="/", status_code=303)
-
 
 @app.post("/review/{review_id}/comment")
 async def add_comment(
@@ -301,18 +340,14 @@ async def add_comment(
     if not user:
         flash(request, "ВОЙДИТЕ, ЧТОБЫ ОСТАВИТЬ КОММЕНТАРИЙ", "error")
         return RedirectResponse(url="/login", status_code=303)
-
     query = select(Review).where(Review.id == review_id)
     result = await db.execute(query)
     review = result.scalar_one_or_none()
-    
     if not review:
         raise HTTPException(status_code=404, detail="Review not found")
-
     new_comment = Comment(text=text, user_id=user.id, review_id=review_id)
     db.add(new_comment)
     await db.commit()
-    
     flash(request, "КОММЕНТАРИЙ ОПУБЛИКОВАН", "success")
     return RedirectResponse(url=f"/review/{review_id}", status_code=303)
 
@@ -326,28 +361,22 @@ async def toggle_like(
     if not user:
         flash(request, "ВОЙДИТЕ, ЧТОБЫ ОЦЕНИТЬ ЗАПИСЬ", "error")
         return RedirectResponse(url="/login", status_code=303)
-
     query_review = select(Review).where(Review.id == review_id)
     result_review = await db.execute(query_review)
     if not result_review.scalar_one_or_none():
         raise HTTPException(status_code=404, detail="Review not found")
-
     query_like = select(Like).where(Like.user_id == user.id, Like.review_id == review_id)
     result_like = await db.execute(query_like)
     existing_like = result_like.scalar_one_or_none()
-
     if existing_like:
         await db.delete(existing_like)
     else:
         new_like = Like(user_id=user.id, review_id=review_id)
         db.add(new_like)
-        
     await db.commit()
-
     referer = request.headers.get("referer")
     redirect_url = referer if referer else f"/review/{review_id}"
     return RedirectResponse(url=redirect_url, status_code=303)
-
 
 @app.get("/profile", response_class=HTMLResponse)
 async def read_my_profile(
@@ -357,14 +386,12 @@ async def read_my_profile(
 ):
     if not user:
         return RedirectResponse(url="/login", status_code=303)
-    
     query = select(Review).where(Review.user_id == user.id).order_by(Review.created_at.desc()).options(
         selectinload(Review.owner),
         selectinload(Review.likes)
     )
     result = await db.execute(query)
     my_reviews = result.scalars().all()
-    
     return templates.TemplateResponse("profile.html", {
         "request": request, 
         "user": user, 
@@ -387,12 +414,9 @@ async def read_public_profile(
     )
     result = await db.execute(query)
     profile_user = result.scalar_one_or_none()
-    
     if not profile_user:
         raise HTTPException(status_code=404, detail="User not found")
-        
     reviews = sorted(profile_user.reviews, key=lambda r: r.created_at, reverse=True)
-
     return templates.TemplateResponse("profile.html", {
         "request": request,
         "user": current_user,
