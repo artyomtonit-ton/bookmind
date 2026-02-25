@@ -3,9 +3,11 @@ from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
+from sqlalchemy import func, desc
 from sqlalchemy.orm import selectinload
 from jose import JWTError, jwt
 from starlette.middleware.sessions import SessionMiddleware
+from starlette.exceptions import HTTPException as StarletteHTTPException
 
 from .database import get_db, engine, Base
 from .models import Review, User, Comment, Like
@@ -18,6 +20,16 @@ from .schemas import UserCreate, ReviewCreate
 app = FastAPI(title="BookMind")
 app.add_middleware(SessionMiddleware, secret_key=JWT_SECRET)
 templates = Jinja2Templates(directory="app/templates")
+
+@app.exception_handler(StarletteHTTPException)
+async def custom_http_exception_handler(request: Request, exc: StarletteHTTPException):
+    if exc.status_code == 404:
+        return templates.TemplateResponse(
+            "404.html", 
+            {"request": request, "title": "Страница не найдена", "user": None}, 
+            status_code=404
+        )
+    return HTMLResponse(content=f"<div style='background:black;color:white;padding:20px;font-family:sans-serif;'><h1>Ошибка {exc.status_code}</h1><p>{exc.detail}</p><a href='/' style='color:gray;'>На главную</a></div>", status_code=exc.status_code)
 
 def flash(request: Request, message: str, category: str = "success"):
     if "flash_messages" not in request.session:
@@ -67,6 +79,34 @@ async def read_root(
         "reviews": reviews,
         "user": user
     })
+       
+@app.get("/top", response_class=HTMLResponse)
+async def read_top_books(
+    request: Request, 
+    db: AsyncSession = Depends(get_db),
+    user: User = Depends(get_current_user)
+):
+    query = (
+        select(
+            Review.book_title,
+            Review.author,
+            Review.cover_url,
+            func.count(Review.id).label("review_count")
+        )
+        .group_by(Review.book_title, Review.author, Review.cover_url)
+        .order_by(desc("review_count"))
+        .limit(20)
+    )
+    
+    result = await db.execute(query)
+    top_books = result.all() 
+    
+    return templates.TemplateResponse("top.html", {
+        "request": request, 
+        "title": "Топ книг", 
+        "top_books": top_books,
+        "user": user
+    })  
 
 @app.get("/search")
 async def search_book(title: str):
