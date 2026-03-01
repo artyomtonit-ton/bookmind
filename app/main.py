@@ -13,7 +13,7 @@ from .database import get_db, engine, Base
 from .models import Review, User, Comment, Like
 from .utils import fetch_book_info
 from .auth_utils import hash_password, verify_password, create_access_token
-from .secrets import JWT_SECRET, ALGORITHM
+from .config import JWT_SECRET, ALGORITHM
 from pydantic import ValidationError
 from .schemas import UserCreate, ReviewCreate
 

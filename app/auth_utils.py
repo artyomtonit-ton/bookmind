@@ -1,7 +1,7 @@
 import bcrypt
 from jose import jwt
 from datetime import datetime, timedelta
-from .secrets import JWT_SECRET, ALGORITHM
+from .config import JWT_SECRET, ALGORITHM
 
 ACCESS_TOKEN_EXPIRE_DAYS = 1
 
